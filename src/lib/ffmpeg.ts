@@ -87,7 +87,7 @@ function buildSessionId(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function buildVideoFilter(recipe: EditRecipe, targetW: number, targetH: number): string {
+export function buildVideoFilter(recipe: EditRecipe, targetW: number, targetH: number, sourceDuration: number): string {
   const filters: string[] = [];
 
   if (recipe.trimStart > 0 || recipe.trimEnd !== null) {
@@ -96,7 +96,6 @@ function buildVideoFilter(recipe: EditRecipe, targetW: number, targetH: number):
     filters.push("setpts=PTS-STARTPTS");
   }
 
- 
   if (recipe.stabilization) {
     filters.push("deshake");
   }
@@ -125,13 +124,32 @@ function buildVideoFilter(recipe: EditRecipe, targetW: number, targetH: number):
     const pts = (1 / recipe.speed).toFixed(4);
     filters.push(`setpts=${pts}*PTS`);
   }
+
+  if (recipe.fadeInDuration > 0 || recipe.fadeOutDuration > 0) {
+    const trimmedDuration = (recipe.trimEnd ?? sourceDuration) - recipe.trimStart;
+    const outputDuration = trimmedDuration / recipe.speed;
+
+    if (recipe.fadeInDuration > 0) {
+      filters.push(
+        `fade=t=in:st=0:d=${recipe.fadeInDuration.toFixed(4)}`
+      );
+    }
+
+    if (recipe.fadeOutDuration > 0) {
+      const outStart = Math.max(0, outputDuration - recipe.fadeOutDuration);
+      filters.push(
+        `fade=t=out:st=${outStart.toFixed(4)}:d=${recipe.fadeOutDuration.toFixed(4)}`
+      );
+    }
+  }
+
   filters.push(
     `eq=brightness=${recipe.brightness}:contrast=${recipe.contrast}:saturation=${recipe.saturation}`
   );
   return filters.join(",");
 }
 
- export function buildAudioFilter(speed: number, normalizeAudio: boolean): string {
+export function buildAudioFilter(speed: number, normalizeAudio: boolean): string {
   const filters: string[] = [];
 
   let remaining = speed;
@@ -173,11 +191,12 @@ function buildArguments(
   hasOverlay: boolean,
   overlayInputName: string,
   overlayOptions: ImageOverlayOptions | undefined,
-  hasOriginalAudio: boolean
+  hasOriginalAudio: boolean,
+  sourceDuration: number
 ): string[] {
-  const vf = buildVideoFilter(recipe, targetW, targetH);
+  const vf = buildVideoFilter(recipe, targetW, targetH, sourceDuration);
   const audioTrim = hasOriginalAudio ? buildAudioTrimFilter(recipe) : "";
-const audioSpeed = hasOriginalAudio ? buildAudioFilter(recipe.speed, recipe.normalizeAudio ?? false) : "";
+  const audioSpeed = hasOriginalAudio ? buildAudioFilter(recipe.speed, recipe.normalizeAudio ?? false) : "";
   const afParts = [audioTrim, audioSpeed].filter(Boolean);
   const af = afParts.join(",");
 
@@ -285,6 +304,7 @@ export async function exportVideo(
   file: File,
   recipe: EditRecipe,
   onProgress: (percent: number) => void,
+  sourceDuration: number,
   signal?: AbortSignal,
   musicOptions?: BackgroundMusicOptions,
   overlayOptions?: ImageOverlayOptions
@@ -332,12 +352,12 @@ export async function exportVideo(
   try {
     await ffmpeg.writeFile(inputName, await fetchFile(file), { signal });
 
-    const vf = buildVideoFilter(recipe, targetW, targetH);
-  const audioTrim = buildAudioTrimFilter(recipe);
-  const audioSpeed = buildAudioFilter(recipe.speed, recipe.normalizeAudio ?? false);
+    const vf = buildVideoFilter(recipe, targetW, targetH, sourceDuration);
+    const audioTrim = buildAudioTrimFilter(recipe);
+    const audioSpeed = buildAudioFilter(recipe.speed, recipe.normalizeAudio ?? false);
 
-  const afParts = [audioTrim, audioSpeed].filter(Boolean);
-  const af = afParts.join(",");
+    const afParts = [audioTrim, audioSpeed].filter(Boolean);
+    const af = afParts.join(",");
     const hasMusicTrack = !!(musicOptions?.file && recipe.keepAudio);
     const musicInputName = `music_input_${sessionId}.mp3`;
     if (hasMusicTrack) {
@@ -357,7 +377,7 @@ export async function exportVideo(
 
     // ── Two-pass GIF export ──────────────────────────────────────────────────
     if (recipe.format === "gif") {
-      const vf = buildVideoFilter(recipe, targetW, targetH);
+      const vf = buildVideoFilter(recipe, targetW, targetH, sourceDuration);
       const vfWithPalette = vf ? `${vf},palettegen` : "palettegen";
       const vfWithPaletteUse = vf
         ? `[0:v]${vf}[x];[x][1:v]paletteuse`
@@ -411,7 +431,8 @@ export async function exportVideo(
     let args = buildArguments(
       recipe, recipe.format, outputName, inputName, targetW, targetH,
       hasMusicTrack, musicInputName, musicOptions,
-      hasOverlay, overlayInputName, overlayOptions, true
+      hasOverlay, overlayInputName, overlayOptions, true,
+      sourceDuration
     );
 
     let exitCode = await ffmpeg.exec(args, undefined, { signal });
@@ -422,7 +443,8 @@ export async function exportVideo(
       args = buildArguments(
         recipe, recipe.format, outputName, inputName, targetW, targetH,
         hasMusicTrack, musicInputName, musicOptions,
-        hasOverlay, overlayInputName, overlayOptions, false
+        hasOverlay, overlayInputName, overlayOptions, false,
+        sourceDuration
       );
       exitCode = await ffmpeg.exec(args, undefined, { signal });
     }
@@ -432,7 +454,8 @@ export async function exportVideo(
       args = buildArguments(
         recipe, "webm", fallbackOutputName, inputName, targetW, targetH,
         hasMusicTrack, musicInputName, musicOptions,
-        hasOverlay, overlayInputName, overlayOptions, !missingAudioDetected
+        hasOverlay, overlayInputName, overlayOptions, !missingAudioDetected,
+        sourceDuration
       );
 
       const fallbackCode = await ffmpeg.exec(args, undefined, { signal });
@@ -449,6 +472,8 @@ export async function exportVideo(
         width: targetW,
         height: targetH,
         format: "webm",
+        usedFallback: true,
+        warning: `Requested ${recipe.format.toUpperCase()} failed; exported as WebM fallback.`,
       };
     }
 

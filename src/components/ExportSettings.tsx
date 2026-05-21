@@ -118,6 +118,63 @@ export default function ExportSettings({
           )}
         </div>
 
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-heading font-semibold uppercase tracking-wider text-[var(--muted)]">
+              Video transitions
+            </span>
+            <span className="text-xs text-[var(--muted)]">
+              Fade from/to black
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <label htmlFor="fade-in-duration">Fade in</label>
+                <span className="text-[var(--muted)]">
+                  {recipe.fadeInDuration.toFixed(1)}s
+                </span>
+              </div>
+              <input
+                id="fade-in-duration"
+                type="range"
+                min={0}
+                max={5}
+                step={0.1}
+                value={recipe.fadeInDuration}
+                onChange={(e) =>
+                  onChange({ fadeInDuration: Number(e.target.value) })
+                }
+                aria-label="Fade in duration from black"
+                className="w-full accent-film-600 cursor-pointer"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <label htmlFor="fade-out-duration">Fade out</label>
+                <span className="text-[var(--muted)]">
+                  {recipe.fadeOutDuration.toFixed(1)}s
+                </span>
+              </div>
+              <input
+                id="fade-out-duration"
+                type="range"
+                min={0}
+                max={5}
+                step={0.1}
+                value={recipe.fadeOutDuration}
+                onChange={(e) =>
+                  onChange({ fadeOutDuration: Number(e.target.value) })
+                }
+                aria-label="Fade out duration to black"
+                className="w-full accent-film-600 cursor-pointer"
+              />
+            </div>
+          </div>
+        </div>
+
         {!isGif && (
         <div className="flex items-center justify-between mt-4">
           <label

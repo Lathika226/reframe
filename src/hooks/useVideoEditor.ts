@@ -106,6 +106,22 @@ function validateRecipe(recipe: EditRecipe, duration: number ): string | null {
       recipe.saturation < 0 || recipe.saturation > 3,
       "Saturation must be between 0 and 3.",
     ],
+    [
+      recipe.fadeInDuration < 0 || recipe.fadeInDuration > 10,
+      "Fade in duration must be between 0 and 10 seconds.",
+    ],
+    [
+      recipe.fadeOutDuration < 0 || recipe.fadeOutDuration > 10,
+      "Fade out duration must be between 0 and 10 seconds.",
+    ],
+    [
+      recipe.fadeInDuration > ((recipe.trimEnd ?? duration) - recipe.trimStart) / recipe.speed,
+      "Fade in duration cannot exceed the exported clip length.",
+    ],
+    [
+      recipe.fadeOutDuration > ((recipe.trimEnd ?? duration) - recipe.trimStart) / recipe.speed,
+      "Fade out duration cannot exceed the exported clip length.",
+    ],
   ];
 
   return (
@@ -293,6 +309,7 @@ export function useVideoEditor() {
         file,
         recipe,
         setProgress,
+        duration,
         abortController.signal,
         {
           file: musicFile,

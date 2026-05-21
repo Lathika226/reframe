@@ -15,6 +15,10 @@ export interface EditRecipe {
   brightness: number;
   contrast: number;
   saturation: number;
+  fadeInDuration: number;
+  fadeOutDuration: number;
+  isBatchExport?: boolean;
+  batchPresets?: string[];
   soundOnCompletion: boolean;
 }
 
@@ -44,6 +48,10 @@ export interface ExportResult {
   width: number;
   height: number;
   format: "mp4" | "webm" | "mkv" | "gif";
+  /** True when the engine fell back to WebM due to codec/container errors */
+  usedFallback?: boolean;
+  /** Optional human-readable warning (e.g. "Requested MP4 failed; used WebM fallback") */
+  warning?: string;
 }
 
 export type ExportStatus =
@@ -81,6 +89,10 @@ export const DEFAULT_RECIPE: EditRecipe = {
   brightness: 0,
   contrast: 0,
   saturation: 0,
+  fadeInDuration: 0,
+  fadeOutDuration: 0,
+  isBatchExport: false,
+  batchPresets: [],
   soundOnCompletion: false,
 };
 

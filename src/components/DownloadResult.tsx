@@ -51,6 +51,13 @@ export default function DownloadResult({ result, onReset, soundOnCompletion }: P
         </div>
       </div>
 
+      {result.warning && (
+        <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 text-yellow-800 px-3 py-2 rounded-md">
+          <AlertCircle size={16} />
+          <div className="text-sm">{result.warning}</div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div className="bg-[var(--bg)] rounded-lg p-3 border border-[var(--border)]">
           <p className="text-[10px] font-heading font-semibold uppercase tracking-wider text-[var(--muted)] mb-1">Resolution</p>
