@@ -10,7 +10,9 @@ on:
 
 jobs:
   claude-pr-review:
-    if: github.event_name == 'pull_request'
+    if: |
+      github.event_name == 'pull_request' &&
+      secrets.ANTHROPIC_API_KEY != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -56,7 +58,9 @@ jobs:
             6. If ANY check failed or code has issues: post a detailed comment tagging @${{ github.event.pull_request.user.login }} with exactly what failed and how to fix it. Do NOT merge.
 
   claude-issue-triage:
-    if: github.event_name == 'issues'
+    if: |
+      github.event_name == 'issues' &&
+      secrets.ANTHROPIC_API_KEY != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -104,7 +108,8 @@ jobs:
     if: |
       (github.event_name != 'issue_comment' || (!contains(github.event.comment.body, '/assign') && !contains(github.event.comment.body, '/unassign'))) &&
       github.event_name == 'issue_comment' &&
-      github.event.issue.pull_request == null
+      github.event.issue.pull_request == null &&
+      secrets.ANTHROPIC_API_KEY != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
