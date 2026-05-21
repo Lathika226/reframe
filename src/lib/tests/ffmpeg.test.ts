@@ -1,5 +1,49 @@
 import { describe, it, expect } from "vitest";
-import { buildAudioFilter } from "../ffmpeg";
+import { buildAudioFilter, buildVideoFilter } from "../ffmpeg";
+
+const baseVideoRecipe = {
+  preset: "vertical-9-16",
+  customWidth: 1920,
+  customHeight: 1080,
+  framing: "fit",
+  trimStart: 0,
+  trimEnd: null,
+  rotate: 0,
+  keepAudio: true,
+  normalizeAudio: false,
+  speed: 1,
+  quality: 23,
+  format: "mp4",
+  stabilization: false,
+  brightness: 0,
+  contrast: 0,
+  saturation: 0,
+  fadeInDuration: 0,
+  fadeOutDuration: 0,
+  soundOnCompletion: false,
+};
+
+describe("buildVideoFilter", () => {
+  it("should include a fade in filter when fadeInDuration is set", () => {
+    const recipe = {
+      ...baseVideoRecipe,
+      fadeInDuration: 1,
+    };
+
+    expect(buildVideoFilter(recipe, 640, 360, 10)).toContain("fade=t=in:st=0:d=1.0000");
+  });
+
+  it("should include a fade out filter with an output-timeline start time", () => {
+    const recipe = {
+      ...baseVideoRecipe,
+      fadeOutDuration: 2,
+      speed: 2,
+    };
+
+    // Output duration is 10 / 2 = 5 seconds, so fade out should begin at 3.
+    expect(buildVideoFilter(recipe, 640, 360, 10)).toContain("fade=t=out:st=3.0000:d=2.0000");
+  });
+});
 
 describe("buildAudioFilter", () => {
   it("should return an empty string for 1.0x speed", () => {
