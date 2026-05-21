@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ExportResult } from "@/lib/types";
 import { formatBytes } from "@/lib/utils";
 import { Download, RotateCcw, Share2, AlertCircle } from "lucide-react";
@@ -14,9 +14,10 @@ const SHARE_TWEET_TEXT =
 interface Props {
   result: ExportResult;
   onReset: () => void;
+  soundOnCompletion: boolean;
 }
 
-export default function DownloadResult({ result, onReset }: Props) {
+export default function DownloadResult({ result, onReset, soundOnCompletion }: Props) {
   const defaultName = `reframe_${result.width}x${result.height}`;
   const [name, setName] = useState(defaultName);
 
@@ -26,6 +27,12 @@ export default function DownloadResult({ result, onReset }: Props) {
 
   const shareHref = `https://x.com/intent/tweet?text=${encodeURIComponent(SHARE_TWEET_TEXT)}`;
 
+  useEffect(() => {
+    if (soundOnCompletion) {
+      const audio = new Audio("/sounds/export-complete.mp3");
+      audio.play().catch(console.error);
+    }
+  }, [soundOnCompletion]);
   const handleReset = () => {
     if (window.confirm("This will clear the current video and all settings. Continue?")) {
       onReset();
@@ -43,6 +50,13 @@ export default function DownloadResult({ result, onReset }: Props) {
           <p className="text-xs text-[var(--muted)] mt-0.5">Ready to download</p>
         </div>
       </div>
+
+      {result.warning && (
+        <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 text-yellow-800 px-3 py-2 rounded-md">
+          <AlertCircle size={16} />
+          <div className="text-sm">{result.warning}</div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div className="bg-[var(--bg)] rounded-lg p-3 border border-[var(--border)]">
@@ -95,15 +109,15 @@ export default function DownloadResult({ result, onReset }: Props) {
           download={isValid ? filename : undefined}
           className={cn(
             "flex-1 min-w-[10rem] flex items-center justify-center gap-2 py-3 text-white text-sm font-heading font-bold uppercase tracking-wide rounded-lg transition-all",
-            isValid 
-              ? "bg-film-600 hover:bg-film-700 hover:scale-[1.01] active:scale-[0.99] cursor-pointer" 
+            isValid
+              ? "bg-film-600 hover:bg-film-700 hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
               : "bg-film-600/50 cursor-not-allowed"
           )}
           onClick={(e) => {
             if (!isValid) e.preventDefault();
           }}
         >
-          <Download size={15} />
+          <Download size={15} aria-hidden="true"  />
           Download {result.format.toUpperCase()}
         </a>
         <a
@@ -122,7 +136,7 @@ export default function DownloadResult({ result, onReset }: Props) {
           onClick={handleReset}
           className="flex items-center gap-2 px-4 py-3 border border-[var(--border)] text-[var(--muted)] text-sm rounded-lg hover:bg-[var(--bg)] transition-colors"
         >
-          <RotateCcw size={14} />
+          <RotateCcw size={14} aria-hidden="true"  />
           New
         </button>
         <a
